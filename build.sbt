@@ -21,6 +21,7 @@ replaceCommandAlias(
 )
 
 val catsEffectVersion = "3.3.0"
+val disciplineSpecs2Version = "1.2.5"
 
 lazy val root =
   project.in(file(".")).aggregate(core).enablePlugins(NoPublishPlugin)
@@ -30,7 +31,9 @@ lazy val core = project
   .settings(
     name := "fungio",
     libraryDependencies ++= Seq(
-      "org.typelevel" %%% "cats-effect-kernel" % catsEffectVersion
+      "org.typelevel" %% "cats-effect-kernel" % catsEffectVersion,
+      "org.typelevel" %% "cats-effect-laws" % catsEffectVersion % Test,
+      "org.typelevel" %% "discipline-specs2" % disciplineSpecs2Version % Test
     )
   )
 

@@ -27,7 +27,7 @@ import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 
-sealed abstract class FungIO[+A] private[fungio] extends RootNode(null) {
+abstract class FungIO[+A] private[fungio] extends RootNode(null) {
 
   def execute(frame: VirtualFrame): Try[A]
 
@@ -48,9 +48,11 @@ object FungIO
 
   override def raiseError[A](e: Throwable): FungIO[A] = PureOrError(Failure(e))
 
-  override def handleErrorWith[A](fa: FungIO[A])(f: Throwable => FungIO[A]): FungIO[A] = ???
+  override def handleErrorWith[A](fa: FungIO[A])(f: Throwable => FungIO[A]): FungIO[A] =
+    new RedeemWith[A, A](fa, pure(_), f)
 
-  override def flatMap[A, B](fa: FungIO[A])(f: A => FungIO[B]): FungIO[B] = ???
+  override def flatMap[A, B](fa: FungIO[A])(f: A => FungIO[B]): FungIO[B] =
+    new RedeemWith[A, B](fa, f, raiseError(_))
 
   override def forceR[A, B](fa: FungIO[A])(fb: FungIO[B]): FungIO[B] = productR(attempt(fa))(fb)
 

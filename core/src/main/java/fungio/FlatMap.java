@@ -16,6 +16,4 @@
 
 package fungio;
 
-final class FlatMap<A> extends FungIO<A> {
-
-}
+final class FlatMap<A> {}

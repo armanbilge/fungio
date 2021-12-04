@@ -48,7 +48,7 @@ final class RedeemWith<A, B> extends FungIO<B> {
       fb = g.apply(ex);
     }
     @SuppressWarnings("unchecked")
-    Try<B> tryB = (Try<B>) call.call(fb.getCallTarget());
+    Try<B> tryB = (Try<B>) call.call(Truffle.getRuntime().createCallTarget(fb));
     return tryB;
   }
 }

@@ -16,9 +16,11 @@
 
 package fungio
 
+import cats.Show
 import cats.StackSafeMonad
 import cats.effect.kernel.MonadCancel
 import cats.effect.kernel.Sync
+import com.oracle.truffle.api.Truffle
 import com.oracle.truffle.api.frame.VirtualFrame
 import com.oracle.truffle.api.nodes.RootNode
 
@@ -31,7 +33,8 @@ abstract class FungIO[+A] private[fungio] extends RootNode(null) {
 
   def execute(frame: VirtualFrame): Try[A]
 
-  final def unsafeRunSync(): A = getCallTarget().call().asInstanceOf[Try[A]].get
+  final def unsafeRunSync(): A =
+    Truffle.getRuntime().createCallTarget(this).call().asInstanceOf[Try[A]].get
 
 }
 
@@ -43,6 +46,7 @@ object FungIO
   def apply[A](thunk: => A): FungIO[A] = delay(thunk)
 
   implicit def syncForFungIO: Sync[FungIO] = this
+  implicit def showForFungIO[A]: Show[FungIO[A]] = _ => "FungIO(...)"
 
   override def pure[A](x: A): FungIO[A] = PureOrError(Success(x))
 

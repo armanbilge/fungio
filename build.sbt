@@ -33,14 +33,12 @@ lazy val core = project
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-effect-kernel" % catsEffectVersion,
       "org.typelevel" %% "cats-effect-laws" % catsEffectVersion % Test,
+      "org.typelevel" %% "cats-effect-testkit" % catsEffectVersion % Test,
       "org.typelevel" %% "discipline-specs2" % disciplineSpecs2Version % Test
     ),
-    javacOptions ++= Seq(
-      "--add-modules=org.graalvm.truffle",
-      "--add-exports=org.graalvm.truffle/com.oracle.truffle.api=ALL-UNNAMED",
-      "--add-exports=org.graalvm.truffle/com.oracle.truffle.api.frame=ALL-UNNAMED",
-      "--add-exports=org.graalvm.truffle/com.oracle.truffle.api.nodes=ALL-UNNAMED"
-    )
+    javacOptions ++= modules,
+    javaOptions ++= modules,
+    fork := true
   )
 
 lazy val benchmarks = project
@@ -48,3 +46,10 @@ lazy val benchmarks = project
   .dependsOn(core)
   .settings(name := "fungio-benchmarks")
   .enablePlugins(NoPublishPlugin, JmhPlugin)
+
+lazy val modules = Seq(
+  "--add-modules=org.graalvm.truffle",
+  "--add-exports=org.graalvm.truffle/com.oracle.truffle.api=ALL-UNNAMED",
+  "--add-exports=org.graalvm.truffle/com.oracle.truffle.api.frame=ALL-UNNAMED",
+  "--add-exports=org.graalvm.truffle/com.oracle.truffle.api.nodes=ALL-UNNAMED"
+)

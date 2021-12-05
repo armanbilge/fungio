@@ -48,7 +48,7 @@ final class RedeemWith<A, B> extends FungIO<B> {
         fb = f.apply(a);
       } catch (Throwable ex) {
         if (NonFatal.apply(ex)) {
-          fb = new PureOrError(new Failure(ex));
+          fb = new PureOrError<B>(new Failure<B>(ex));
         } else {
           throw ex;
         }
@@ -59,7 +59,7 @@ final class RedeemWith<A, B> extends FungIO<B> {
         fb = g.apply(ex);
       } catch (Throwable ex2) {
         if (NonFatal.apply(ex2)) {
-          fb = new PureOrError(new Failure(ex2));
+          fb = new PureOrError<B>(new Failure<B>(ex2));
         } else {
           throw ex2;
         }

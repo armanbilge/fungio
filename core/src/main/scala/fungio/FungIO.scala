@@ -55,6 +55,14 @@ object FungIO
   override def handleErrorWith[A](fa: FungIO[A])(f: Throwable => FungIO[A]): FungIO[A] =
     new RedeemWith[A, A](fa, pure(_), f)
 
+  override def redeem[A, B](fa: FungIO[A])(recover: Throwable => B, f: A => B): FungIO[B] =
+    redeemWith(fa)(ex => pure(recover(ex)), a => pure(f(a)))
+
+  override def redeemWith[A, B](fa: FungIO[A])(
+      recover: Throwable => FungIO[B],
+      bind: A => FungIO[B]
+  ): FungIO[B] = new RedeemWith[A, B](fa, bind(_), recover(_))
+
   override def flatMap[A, B](fa: FungIO[A])(f: A => FungIO[B]): FungIO[B] =
     new RedeemWith[A, B](fa, f, raiseError(_))
 

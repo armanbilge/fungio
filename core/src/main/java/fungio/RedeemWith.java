@@ -20,6 +20,8 @@ import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.IndirectCallNode;
 import scala.Function1;
+import scala.util.control.NonFatal;
+import scala.util.Failure;
 import scala.util.Try;
 
 final class RedeemWith<A, B> extends FungIO<B> {
@@ -42,10 +44,26 @@ final class RedeemWith<A, B> extends FungIO<B> {
     FungIO<B> fb;
     if (tryA.isSuccess()) {
       A a = tryA.get();
-      fb = f.apply(a);
+      try {
+        fb = f.apply(a);
+      } catch (Throwable ex) {
+        if (NonFatal.apply(ex)) {
+          fb = new PureOrError(new Failure(ex));
+        } else {
+          throw ex;
+        }
+      }
     } else {
       Throwable ex = tryA.failed().get();
-      fb = g.apply(ex);
+      try {
+        fb = g.apply(ex);
+      } catch (Throwable ex2) {
+        if (NonFatal.apply(ex2)) {
+          fb = new PureOrError(new Failure(ex2));
+        } else {
+          throw ex2;
+        }
+      }
     }
     @SuppressWarnings("unchecked")
     Try<B> tryB = (Try<B>) call.call(Truffle.getRuntime().createCallTarget(fb));

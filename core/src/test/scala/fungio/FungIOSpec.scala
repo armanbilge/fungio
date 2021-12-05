@@ -18,6 +18,7 @@ package fungio
 
 import cats.Id
 import cats.Show
+import cats.effect.kernel.MonadCancel
 import cats.effect.kernel.Outcome
 import cats.effect.kernel.Sync
 import cats.effect.kernel.testkit.SyncGenerators
@@ -35,7 +36,6 @@ import org.typelevel.discipline.specs2.mutable.Discipline
 
 import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
-import cats.effect.kernel.MonadCancel
 
 class FungIOSpec extends Specification with Discipline with TestInstances {
 

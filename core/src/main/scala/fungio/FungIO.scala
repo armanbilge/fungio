@@ -22,19 +22,30 @@ import cats.effect.kernel.MonadCancel
 import cats.effect.kernel.Sync
 import com.oracle.truffle.api.Truffle
 import com.oracle.truffle.api.frame.VirtualFrame
+import com.oracle.truffle.api.nodes.ControlFlowException
 import com.oracle.truffle.api.nodes.RootNode
 
 import scala.concurrent.duration._
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
+import java.util.ArrayDeque
+
+import FungIOConstants._
 
 abstract class FungIO[+A] private[fungio] extends RootNode(null) {
 
   def execute(frame: VirtualFrame): Try[A]
 
-  final def unsafeRunSync(): A =
-    Truffle.getRuntime().createCallTarget(this).call().asInstanceOf[Try[A]].get
+  final def unsafeRunSync(): A = {
+    val unsafeRun = new UnsafeRun(this.asInstanceOf[FungIO[AnyRef]])
+    Truffle
+      .getRuntime()
+      .createCallTarget(unsafeRun)
+      .call(Integer.valueOf(MaxStackDepth))
+      .asInstanceOf[Try[A]]
+      .get
+  }
 
 }
 
@@ -53,18 +64,13 @@ object FungIO
   override def raiseError[A](e: Throwable): FungIO[A] = PureOrError(Failure(e))
 
   override def handleErrorWith[A](fa: FungIO[A])(f: Throwable => FungIO[A]): FungIO[A] =
-    new RedeemWith[A, A](fa, pure(_), f)
+    new RedeemWith[A, A](fa, _.fold(f, pure(_)))
 
   override def redeem[A, B](fa: FungIO[A])(recover: Throwable => B, f: A => B): FungIO[B] =
     redeemWith(fa)(ex => pure(recover(ex)), a => pure(f(a)))
 
-  override def redeemWith[A, B](fa: FungIO[A])(
-      recover: Throwable => FungIO[B],
-      bind: A => FungIO[B]
-  ): FungIO[B] = new RedeemWith[A, B](fa, bind(_), recover(_))
-
   override def flatMap[A, B](fa: FungIO[A])(f: A => FungIO[B]): FungIO[B] =
-    new RedeemWith[A, B](fa, f, raiseError(_))
+    new RedeemWith[A, B](fa, _.fold(raiseError(_), f(_)))
 
   override def forceR[A, B](fa: FungIO[A])(fb: FungIO[B]): FungIO[B] = productR(attempt(fa))(fb)
 
@@ -83,4 +89,10 @@ private final case class PureOrError[A](value: Try[A]) extends FungIO[A] {
 
 private final case class Suspend[A](thunk: () => A) extends FungIO[A] {
   override def execute(frame: VirtualFrame): Try[A] = Try(thunk())
+}
+
+private final class UnrollStack(val fa: FungIO[AnyRef]) extends ControlFlowException {
+  val conts = new ArrayDeque[Try[AnyRef] => FungIO[AnyRef]](MaxStackDepth)
+  def push[A, B](f: Try[A] => FungIO[B]): Unit =
+    conts.addFirst(f.asInstanceOf[Try[AnyRef] => FungIO[AnyRef]])
 }

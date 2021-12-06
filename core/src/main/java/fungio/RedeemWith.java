@@ -18,6 +18,7 @@ package fungio;
 
 import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.nodes.DirectCallNode;
 import com.oracle.truffle.api.nodes.IndirectCallNode;
 import scala.Function1;
 import scala.util.control.NonFatal;
@@ -26,26 +27,33 @@ import scala.util.Try;
 
 final class RedeemWith<A, B> extends FungIO<B> {
 
-  @Child private FungIO<A> fa;
-  @Child private IndirectCallNode call;
-  private Function1<A, FungIO<B>> f;
-  private Function1<Throwable, FungIO<B>> g;
+  @Child private DirectCallNode fa;
+  @Child private IndirectCallNode indirect;
+  private Function1<Try<A>, FungIO<B>> f;
 
-  RedeemWith(FungIO<A> fa, Function1<A, FungIO<B>> f, Function1<Throwable, FungIO<B>> g) {
-    this.fa = fa;
+  RedeemWith(FungIO<A> fa, Function1<Try<A>, FungIO<B>> f) {
     this.f = f;
-    this.g = g;
-    this.call = Truffle.getRuntime().createIndirectCallNode();
+    this.fa = Truffle.getRuntime().createDirectCallNode(Truffle.getRuntime().createCallTarget(fa));
+    this.indirect = Truffle.getRuntime().createIndirectCallNode();
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public Try<B> execute(VirtualFrame frame) {
-    Try<A> tryA = fa.execute(frame);
-    FungIO<B> fb;
-    if (tryA.isSuccess()) {
-      A a = tryA.get();
+    int maxStackDepth = (int) frame.getArguments()[0];
+    if (maxStackDepth > 0) {
+
+      Try<A> tryA;
       try {
-        fb = f.apply(a);
+        tryA = (Try<A>) fa.call(maxStackDepth - 1);
+      } catch (UnrollStack stack) {
+        stack.push(f);
+        throw stack;
+      }
+
+      FungIO<B> fb;
+      try {
+        fb = f.apply(tryA);
       } catch (Throwable ex) {
         if (NonFatal.apply(ex)) {
           fb = new PureOrError<B>(new Failure<B>(ex));
@@ -53,20 +61,12 @@ final class RedeemWith<A, B> extends FungIO<B> {
           throw ex;
         }
       }
+
+      Try<B> tryB =
+          (Try<B>) indirect.call(Truffle.getRuntime().createCallTarget(fb), maxStackDepth - 1);
+      return tryB;
     } else {
-      Throwable ex = tryA.failed().get();
-      try {
-        fb = g.apply(ex);
-      } catch (Throwable ex2) {
-        if (NonFatal.apply(ex2)) {
-          fb = new PureOrError<B>(new Failure<B>(ex2));
-        } else {
-          throw ex2;
-        }
-      }
+      throw new UnrollStack((FungIO<Object>) this);
     }
-    @SuppressWarnings("unchecked")
-    Try<B> tryB = (Try<B>) call.call(Truffle.getRuntime().createCallTarget(fb));
-    return tryB;
   }
 }

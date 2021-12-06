@@ -184,6 +184,13 @@ class FungIOSpec extends Specification with Discipline with TestInstances {
       loop(0) must completeAs(())
     }
 
+    "evaluate 50,000 tailRecM iterations" in {
+      val n = 50000
+      val res =
+        FungIO.tailRecM(0)(i => FungIO.pure(if (i < n) Either.left(i + 1) else Either.right(i)))
+      res must completeAs(n)
+    }
+
     "catch exceptions thrown in map functions" in {
       case object TestException extends RuntimeException
       FungIO.unit.map(_ => (throw TestException): Unit).attempt must completeAs(

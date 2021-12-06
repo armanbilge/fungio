@@ -38,11 +38,11 @@ abstract class FungIO[+A] private[fungio] extends RootNode(null) {
   def execute(frame: VirtualFrame): Try[A]
 
   final def unsafeRunSync(): A = {
-    val unsafeRun = new UnsafeRun(this)
+    val unsafeRun = new UnsafeRun(this.asInstanceOf[FungIO[AnyRef]])
     Truffle
       .getRuntime()
       .createCallTarget(unsafeRun)
-      .call(MaxStackDepth)
+      .call(Integer.valueOf(MaxStackDepth))
       .asInstanceOf[Try[A]]
       .get
   }

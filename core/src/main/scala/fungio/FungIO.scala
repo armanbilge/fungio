@@ -22,6 +22,7 @@ import cats.effect.kernel.MonadCancel
 import cats.effect.kernel.Sync
 import com.oracle.truffle.api.Truffle
 import com.oracle.truffle.api.frame.VirtualFrame
+import com.oracle.truffle.api.nodes.ControlFlowException
 import com.oracle.truffle.api.nodes.RootNode
 
 import scala.concurrent.duration._
@@ -33,8 +34,10 @@ abstract class FungIO[+A] private[fungio] extends RootNode(null) {
 
   def execute(frame: VirtualFrame): Try[A]
 
-  final def unsafeRunSync(): A =
-    Truffle.getRuntime().createCallTarget(this).call().asInstanceOf[Try[A]].get
+  final def unsafeRunSync(maxStackDepth: Int = 5): A = {
+    val unsafeRun = new UnsafeRun(this)
+    Truffle.getRuntime().createCallTarget(unsafeRun).call(maxStackDepth).asInstanceOf[Try[A]].get
+  }
 
 }
 
@@ -84,3 +87,5 @@ private final case class PureOrError[A](value: Try[A]) extends FungIO[A] {
 private final case class Suspend[A](thunk: () => A) extends FungIO[A] {
   override def execute(frame: VirtualFrame): Try[A] = Try(thunk())
 }
+
+private final class UnrollStack[A](val fa: FungIO[A]) extends ControlFlowException

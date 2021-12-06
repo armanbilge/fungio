@@ -29,12 +29,10 @@ final class RedeemWith<A, B> extends FungIO<B> {
 
   @Child private DirectCallNode fa;
   @Child private IndirectCallNode indirect;
-  private Function1<A, FungIO<B>> f;
-  private Function1<Throwable, FungIO<B>> g;
+  private Function1<Try<A>, FungIO<B>> f;
 
-  RedeemWith(FungIO<A> fa, Function1<A, FungIO<B>> f, Function1<Throwable, FungIO<B>> g) {
+  RedeemWith(FungIO<A> fa, Function1<Try<A>, FungIO<B>> f) {
     this.f = f;
-    this.g = g;
     this.fa = Truffle.getRuntime().createDirectCallNode(Truffle.getRuntime().createCallTarget(fa));
     this.indirect = Truffle.getRuntime().createIndirectCallNode();
   }
@@ -48,32 +46,19 @@ final class RedeemWith<A, B> extends FungIO<B> {
       Try<A> tryA;
       try {
         tryA = (Try<A>) fa.call(maxStackDepth - 1);
-      } catch (UnrollStack<A> unroll) {
-        throw new UnrollStack<B>(new RedeemWith<A, B>(unroll.fa(), f, g));
+      } catch (UnrollStack stack) {
+        stack.enqueue(f);
+        throw stack;
       }
 
       FungIO<B> fb;
-      if (tryA.isSuccess()) {
-        A a = tryA.get();
-        try {
-          fb = f.apply(a);
-        } catch (Throwable ex) {
-          if (NonFatal.apply(ex)) {
-            fb = new PureOrError<B>(new Failure<B>(ex));
-          } else {
-            throw ex;
-          }
-        }
-      } else {
-        Throwable ex = tryA.failed().get();
-        try {
-          fb = g.apply(ex);
-        } catch (Throwable ex2) {
-          if (NonFatal.apply(ex2)) {
-            fb = new PureOrError<B>(new Failure<B>(ex2));
-          } else {
-            throw ex2;
-          }
+      try {
+        fb = f.apply(tryA);
+      } catch (Throwable ex) {
+        if (NonFatal.apply(ex)) {
+          fb = new PureOrError<B>(new Failure<B>(ex));
+        } else {
+          throw ex;
         }
       }
 
@@ -81,7 +66,7 @@ final class RedeemWith<A, B> extends FungIO<B> {
           (Try<B>) indirect.call(Truffle.getRuntime().createCallTarget(fb), maxStackDepth - 1);
       return tryB;
     } else {
-      throw new UnrollStack<B>(this);
+      throw new UnrollStack((FungIO<Object>) this);
     }
   }
 }

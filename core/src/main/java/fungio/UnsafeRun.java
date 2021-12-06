@@ -20,31 +20,48 @@ import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.RootNode;
 import com.oracle.truffle.api.nodes.IndirectCallNode;
+import java.util.ArrayDeque;
 import scala.Function1;
 import scala.util.control.NonFatal;
 import scala.util.Failure;
 import scala.util.Try;
 
-final class UnsafeRun<A> extends RootNode {
+final class UnsafeRun extends RootNode {
 
-  @Child private FungIO<A> fa;
+  @Child private FungIO<Object> fa;
   @Child private IndirectCallNode indirect;
 
-  UnsafeRun(FungIO<A> fa) {
+  UnsafeRun(FungIO<Object> fa) {
     super(null);
     this.fa = fa;
     this.indirect = Truffle.getRuntime().createIndirectCallNode();
   }
 
+  @SuppressWarnings("unchecked")
   @Override
-  public Try<A> execute(VirtualFrame frame) {
+  public Try<Object> execute(VirtualFrame frame) {
     int maxStackDepth = (int) frame.getArguments()[0];
-    FungIO<A> fa = this.fa;
+    FungIO<Object> fa = this.fa;
+    ArrayDeque<FifoQueue<Function1<Try<Object>, FungIO<Object>>>> deque =
+        new ArrayDeque<FifoQueue<Function1<Try<Object>, FungIO<Object>>>>();
+
     while (true) {
       try {
-        return (Try<A>) indirect.call(Truffle.getRuntime().createCallTarget(fa), maxStackDepth);
-      } catch (UnrollStack<A> unroll) {
-        fa = unroll.fa();
+        Try<Object> tryA =
+            (Try<Object>) indirect.call(Truffle.getRuntime().createCallTarget(fa), maxStackDepth);
+        if (deque.isEmpty()) {
+          return tryA;
+        } else {
+          FifoQueue<Function1<Try<Object>, FungIO<Object>>> queue = deque.peekLast();
+          Function1<Try<Object>, FungIO<Object>> f = queue.dequeue();
+          if (queue.isEmpty()) {
+            deque.removeLast();
+          }
+          fa = f.apply(tryA);
+        }
+      } catch (UnrollStack stack) {
+        fa = stack.fa();
+        deque.addLast(stack.conts());
       }
     }
   }

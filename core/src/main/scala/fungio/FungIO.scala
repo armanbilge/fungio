@@ -30,13 +30,20 @@ import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 
+import FungIOConstants._
+
 abstract class FungIO[+A] private[fungio] extends RootNode(null) {
 
   def execute(frame: VirtualFrame): Try[A]
 
-  final def unsafeRunSync(maxStackDepth: Int = 5): A = {
+  final def unsafeRunSync(): A = {
     val unsafeRun = new UnsafeRun(this)
-    Truffle.getRuntime().createCallTarget(unsafeRun).call(maxStackDepth).asInstanceOf[Try[A]].get
+    Truffle
+      .getRuntime()
+      .createCallTarget(unsafeRun)
+      .call(MaxStackDepth)
+      .asInstanceOf[Try[A]]
+      .get
   }
 
 }
@@ -56,18 +63,13 @@ object FungIO
   override def raiseError[A](e: Throwable): FungIO[A] = PureOrError(Failure(e))
 
   override def handleErrorWith[A](fa: FungIO[A])(f: Throwable => FungIO[A]): FungIO[A] =
-    new RedeemWith[A, A](fa, pure(_), f)
+    new RedeemWith[A, A](fa, _.fold(f, pure(_)))
 
   override def redeem[A, B](fa: FungIO[A])(recover: Throwable => B, f: A => B): FungIO[B] =
     redeemWith(fa)(ex => pure(recover(ex)), a => pure(f(a)))
 
-  override def redeemWith[A, B](fa: FungIO[A])(
-      recover: Throwable => FungIO[B],
-      bind: A => FungIO[B]
-  ): FungIO[B] = new RedeemWith[A, B](fa, bind(_), recover(_))
-
   override def flatMap[A, B](fa: FungIO[A])(f: A => FungIO[B]): FungIO[B] =
-    new RedeemWith[A, B](fa, f, raiseError(_))
+    new RedeemWith[A, B](fa, _.fold(raiseError(_), f(_)))
 
   override def forceR[A, B](fa: FungIO[A])(fb: FungIO[B]): FungIO[B] = productR(attempt(fa))(fb)
 
@@ -88,4 +90,8 @@ private final case class Suspend[A](thunk: () => A) extends FungIO[A] {
   override def execute(frame: VirtualFrame): Try[A] = Try(thunk())
 }
 
-private final class UnrollStack[A](val fa: FungIO[A]) extends ControlFlowException
+private final class UnrollStack(val fa: FungIO[AnyRef]) extends ControlFlowException {
+  val conts = new FifoQueue[Try[AnyRef] => FungIO[AnyRef]](MaxStackDepth)
+  def enqueue[A, B](f: Try[A] => FungIO[B]): Unit =
+    conts.enqueue(f.asInstanceOf[Try[AnyRef] => FungIO[AnyRef]])
+}

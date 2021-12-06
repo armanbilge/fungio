@@ -186,7 +186,8 @@ class FungIOSpec extends Specification with Discipline with TestInstances {
 
     "evaluate 50,000 tailRecM iterations" in {
       val n = 50000
-      val res = FungIO.tailRecM(0)(i => FungIO.pure(if (i < n) Either.left(i + 1) else Either.right(i)))
+      val res =
+        FungIO.tailRecM(0)(i => FungIO.pure(if (i < n) Either.left(i + 1) else Either.right(i)))
       res must completeAs(n)
     }
 

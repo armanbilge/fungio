@@ -29,6 +29,7 @@ import scala.concurrent.duration._
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
+import java.util.ArrayDeque
 
 import FungIOConstants._
 
@@ -91,7 +92,7 @@ private final case class Suspend[A](thunk: () => A) extends FungIO[A] {
 }
 
 private final class UnrollStack(val fa: FungIO[AnyRef]) extends ControlFlowException {
-  val conts = new FifoQueue[Try[AnyRef] => FungIO[AnyRef]](MaxStackDepth)
-  def enqueue[A, B](f: Try[A] => FungIO[B]): Unit =
-    conts.enqueue(f.asInstanceOf[Try[AnyRef] => FungIO[AnyRef]])
+  val conts = new ArrayDeque[Try[AnyRef] => FungIO[AnyRef]](MaxStackDepth)
+  def push[A, B](f: Try[A] => FungIO[B]): Unit =
+    conts.addFirst(f.asInstanceOf[Try[AnyRef] => FungIO[AnyRef]])
 }

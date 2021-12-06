@@ -47,7 +47,7 @@ final class RedeemWith<A, B> extends FungIO<B> {
       try {
         tryA = (Try<A>) fa.call(maxStackDepth - 1);
       } catch (UnrollStack stack) {
-        stack.enqueue(f);
+        stack.push(f);
         throw stack;
       }
 

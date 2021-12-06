@@ -42,8 +42,8 @@ final class UnsafeRun extends RootNode {
   public Try<Object> execute(VirtualFrame frame) {
     int maxStackDepth = (int) frame.getArguments()[0];
     FungIO<Object> fa = this.fa;
-    ArrayDeque<FifoQueue<Function1<Try<Object>, FungIO<Object>>>> deque =
-        new ArrayDeque<FifoQueue<Function1<Try<Object>, FungIO<Object>>>>();
+    ArrayDeque<ArrayDeque<Function1<Try<Object>, FungIO<Object>>>> deque =
+        new ArrayDeque<ArrayDeque<Function1<Try<Object>, FungIO<Object>>>>();
 
     while (true) {
       try {
@@ -52,8 +52,8 @@ final class UnsafeRun extends RootNode {
         if (deque.isEmpty()) {
           return tryA;
         } else {
-          FifoQueue<Function1<Try<Object>, FungIO<Object>>> queue = deque.peekLast();
-          Function1<Try<Object>, FungIO<Object>> f = queue.dequeue();
+          ArrayDeque<Function1<Try<Object>, FungIO<Object>>> queue = deque.peekLast();
+          Function1<Try<Object>, FungIO<Object>> f = queue.removeLast();
           if (queue.isEmpty()) {
             deque.removeLast();
           }
@@ -61,7 +61,10 @@ final class UnsafeRun extends RootNode {
         }
       } catch (UnrollStack stack) {
         fa = stack.fa();
-        deque.addLast(stack.conts());
+        ArrayDeque<Function1<Try<Object>, FungIO<Object>>> conts = stack.conts();
+        if (!stack.conts().isEmpty()) {
+          deque.addLast(stack.conts());
+        }
       }
     }
   }

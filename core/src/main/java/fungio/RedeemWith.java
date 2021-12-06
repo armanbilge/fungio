@@ -29,7 +29,7 @@ final class RedeemWith<A, B> extends FungIO<B> {
 
   @Child private DirectCallNode fa;
   @Child private IndirectCallNode indirect;
-  private Function1<Try<A>, FungIO<B>> f;
+  private final Function1<Try<A>, FungIO<B>> f;
 
   RedeemWith(FungIO<A> fa, Function1<Try<A>, FungIO<B>> f) {
     this.f = f;

@@ -23,7 +23,6 @@ import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations._
 
 /**
- *
  * To run the benchmark from within sbt:
  *
  * jmh:run -i 10 -wi 10 -f 2 -t 1 fungio.benchmarks.DeepBindBenchmark

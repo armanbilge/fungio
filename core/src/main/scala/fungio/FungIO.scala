@@ -88,6 +88,7 @@ object FungIO
 
 private final case class PureOrError[A](value: Try[A]) extends FungIO[A] {
   override def execute(frame: VirtualFrame): Try[A] = value
+  override protected def isTrivial(): Boolean = true
 }
 
 private final case class Suspend[A](thunk: () => A) extends FungIO[A] {

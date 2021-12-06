@@ -37,6 +37,9 @@ abstract class FungIO[+A] private[fungio] extends RootNode(null) {
 
   def execute(frame: VirtualFrame): Try[A]
 
+  final def flatMap[B](f: A => FungIO[B]): FungIO[B] =
+    FungIO.flatMap(this)(f)
+
   final def unsafeRunSync(): A = {
     val unsafeRun = new UnsafeRun(this.asInstanceOf[FungIO[AnyRef]])
     Truffle

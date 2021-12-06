@@ -24,7 +24,7 @@ val catsEffectVersion = "3.3.0"
 val disciplineSpecs2Version = "1.2.5"
 
 lazy val root =
-  project.in(file(".")).aggregate(core).enablePlugins(NoPublishPlugin)
+  project.in(file(".")).aggregate(core, benchmarks).enablePlugins(NoPublishPlugin)
 
 lazy val core = project
   .in(file("core"))
@@ -44,7 +44,11 @@ lazy val core = project
 lazy val benchmarks = project
   .in(file("benchmarks"))
   .dependsOn(core)
-  .settings(name := "fungio-benchmarks")
+  .settings(
+    name := "fungio-benchmarks",
+    libraryDependencies += "org.typelevel" %% "cats-effect" % catsEffectVersion,
+    javaOptions ++= modules
+  )
   .enablePlugins(NoPublishPlugin, JmhPlugin)
 
 lazy val modules = Seq(

@@ -17,5 +17,5 @@
 package fungio;
 
 interface FungIOConstants {
-  public static final int MaxStackDepth = 128;
+  public static final int MaxStackDepth = 512;
 }

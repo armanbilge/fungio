@@ -1,11 +1,26 @@
 name := "fungio"
 
-ThisBuild / baseVersion := "0.1"
+ThisBuild / tlBaseVersion := "0.1"
 
 ThisBuild / organization := "com.armanbilge"
-ThisBuild / publishGithubUser := "armanbilge"
-ThisBuild / publishFullName := "Arman Bilge"
+ThisBuild / developers += tlGitHubDev("armanbilge", "Arman Bilge")
 ThisBuild / startYear := Some(2021)
+
+ThisBuild / tlCiReleaseTags := false
+ThisBuild / tlCiReleaseBranches := Seq.empty
+ThisBuild / githubWorkflowBuild ~= { steps =>
+  steps.map {
+    case step @ WorkflowStep.Sbt(
+          "headerCheckAll" :: "scalafmtCheckAll" :: tail,
+          _,
+          _,
+          _,
+          _,
+          _) =>
+      step.copy(commands = "headerCheckAll" :: "scalafmtCheckAll" :: "javafmtCheckAll" :: tail)
+    case step => step
+  }
+}
 
 ThisBuild / crossScalaVersions := Seq("3.0.2", "2.12.15", "2.13.7")
 
@@ -15,12 +30,7 @@ ThisBuild / githubWorkflowJavaVersions := List(
   JavaSpec.graalvm(graalVersion, "17")
 )
 
-replaceCommandAlias(
-  "ci",
-  "; project /; headerCheckAll; scalafmtCheckAll; javafmtCheckAll; scalafmtSbtCheck; clean; testIfRelevant; mimaReportBinaryIssuesIfRelevant"
-)
-
-val catsEffectVersion = "3.3.0"
+val catsEffectVersion = "3.3.4"
 val disciplineSpecs2Version = "1.2.5"
 
 lazy val root =

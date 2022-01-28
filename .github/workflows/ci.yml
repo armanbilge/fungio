@@ -28,12 +28,12 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         scala: [3.0.2, 2.12.15, 2.13.7]
-        java: [graal_22.0.0@11, graal_22.0.0@17]
+        java: [graal_22.0.0.2@11, graal_22.0.0.2@17]
         exclude:
           - scala: 3.0.2
-            java: graal_22.0.0@17
+            java: graal_22.0.0.2@17
           - scala: 2.12.15
-            java: graal_22.0.0@17
+            java: graal_22.0.0.2@17
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout current branch (full)
@@ -41,18 +41,18 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup GraalVM (graal_22.0.0@11)
-        if: matrix.java == 'graal_22.0.0@11'
+      - name: Setup GraalVM (graal_22.0.0.2@11)
+        if: matrix.java == 'graal_22.0.0.2@11'
         uses: DeLaGuardo/setup-graalvm@5.0
         with:
-          graalvm: 22.0.0
+          graalvm: 22.0.0.2
           java: java11
 
-      - name: Setup GraalVM (graal_22.0.0@17)
-        if: matrix.java == 'graal_22.0.0@17'
+      - name: Setup GraalVM (graal_22.0.0.2@17)
+        if: matrix.java == 'graal_22.0.0.2@17'
         uses: DeLaGuardo/setup-graalvm@5.0
         with:
-          graalvm: 22.0.0
+          graalvm: 22.0.0.2
           java: java17
 
       - name: Cache sbt
@@ -71,16 +71,16 @@ jobs:
         run: sbt '++${{ matrix.scala }}' 'project /' githubWorkflowCheck
 
       - name: Check headers and formatting
-        if: matrix.java == 'graal_22.0.0@11'
+        if: matrix.java == 'graal_22.0.0.2@11'
         run: sbt '++${{ matrix.scala }}' headerCheckAll scalafmtCheckAll javafmtCheckAll 'project /' scalafmtSbtCheck
 
       - name: Test
         run: sbt '++${{ matrix.scala }}' test
 
       - name: Check binary compatibility
-        if: matrix.java == 'graal_22.0.0@11'
+        if: matrix.java == 'graal_22.0.0.2@11'
         run: sbt '++${{ matrix.scala }}' mimaReportBinaryIssues
 
       - name: Generate API documentation
-        if: matrix.java == 'graal_22.0.0@11'
+        if: matrix.java == 'graal_22.0.0.2@11'
         run: sbt '++${{ matrix.scala }}' doc

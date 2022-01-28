@@ -25,7 +25,7 @@ ThisBuild / githubWorkflowBuild ~= { steps =>
 
 ThisBuild / crossScalaVersions := Seq("3.0.2", "2.12.15", "2.13.7")
 
-val graalVersion = "21.3.0"
+val graalVersion = "22.0.0"
 ThisBuild / githubWorkflowJavaVersions := List(
   JavaSpec.graalvm(graalVersion, "11"),
   JavaSpec.graalvm(graalVersion, "17")
